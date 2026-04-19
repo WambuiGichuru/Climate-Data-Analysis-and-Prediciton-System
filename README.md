@@ -1,1 +1,1 @@
-# Climate-Data-Analysis-and-Prediciton-System
+# Climate-Data-Analysis-and-Prediction-System
