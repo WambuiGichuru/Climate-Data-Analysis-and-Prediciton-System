@@ -1,0 +1,28 @@
+# ── Data files (too large for Git)
+data/raw/
+data/processed/
+*.parquet
+*.csv.gz
+*.csv
+*.nc         # NetCDF ERA5 files
+
+# ── Logs (useful locally, not in repo)
+logs/
+*.log
+
+# ── Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# ── Credentials — NEVER commit these
+.env
+credentials.json
+service-account-key.json
+*.cdsapirc
+
+# ── OS clutter
+.DS_Store
+Thumbs.db
