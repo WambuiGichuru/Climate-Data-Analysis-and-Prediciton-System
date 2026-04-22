@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya Rainfall Onset Advisory Dashboard — M1 Mockup</title>
+<style>
+    /* ── Reset & base */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #F0F4F8;
+        color: #1F2937; font-size: 14px; }
+
+    /* ── Top nav bar */
+    .navbar { background: #1B3A5C; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between; }
+    .navbar h1 { color: white; font-size: 18px; font-weight: 600; }
+    .freshness { color: #93C5FD; font-size: 12px; }
+
+    /* ── Main layout */
+    .container { display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px; padding: 16px; max-width: 1280px; margin: 0 auto; }
+
+    /* ── Cards */
+    .card { background: white; border-radius: 8px;
+            border: 1px solid #E5E7EB; padding: 16px; }
+    .card-title { font-size: 13px; font-weight: 600; color: #6B7280;
+                text-transform: uppercase; letter-spacing: 0.05em;
+                margin-bottom: 12px; }
+
+    /* ── Map placeholder */
+    .map-placeholder { background: #E8F4EA;
+    border: 2px dashed #6EE7B7;
+    border-radius: 6px; height: 420px;
+    display: flex; align-items: center;
+    justify-content: center; flex-direction: column; gap: 8px; color: #065F46; }
+    .map-placeholder span { font-size: 13px; font-weight: 500; }
+
+    /* ── Risk legend */
+    .legend { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; }
+    .dot-high  { background: #22C55E; }
+    .dot-med   { background: #EAB308; }
+    .dot-low   { background: #EF4444; }
+
+    /* ── County stats sidebar */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { background: #F9FAFB; border-radius: 6px; padding: 12px;
+                border: 1px solid #E5E7EB; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1B3A5C; }
+    .stat-label { font-size: 11px; color: #6B7280; margin-top: 2px; }
+
+    /* ── Chart placeholder */
+    .chart-ph { background: #EEF2FF; border: 2px dashed #A5B4FC;
+    border-radius: 6px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    color: #4338CA; font-size: 13px; font-weight: 500; }
+
+    /* ── County selector */
+    select { width: 100%; padding: 8px 12px; border: 1px solid #D1D5DB;
+            border-radius: 6px; font-size: 13px; margin-bottom: 12px;
+        background: white; }
+
+    /* ── Mobile responsive */
+    @media (max-width: 768px) {
+    .container { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+<div class="navbar">
+    <h1>Kenya Rainfall Onset Advisory Dashboard</h1>
+    <span class="freshness">Forecast as of: 2025-04-20 08:00 EAT (PLACEHOLDER)</span>
+</div>
+
+  <!-- Main Grid -->
+<div class="container">
+
+    <!-- Left: Choropleth Map -->
+    <div class="card" style="grid-column: 1; grid-row: 1;">
+    <div class="card-title">County-Level Onset Risk Map — Long Rains (MAM)</div>
+    <!-- Risk Legend -->
+    <div class="legend">
+        <div class="legend-item"><div class="dot dot-high"></div>High (prob > 0.7)</div>
+        <div class="legend-item"><div class="dot dot-med"></div>Moderate (0.4–0.7)</div>
+        <div class="legend-item"><div class="dot dot-low"></div>Low (prob < 0.4)</div>
+    </div>
+    <!-- Map Area — Leaflet.js replaces this in M2 -->
+    <div class="map-placeholder">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none"
+            stroke="#10B981" stroke-width="1.5">
+        <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894
+                L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021
+                18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+        </svg>
+        <span>Kenya County Choropleth Map</span>
+        <span style="font-size:11px;color:#065F46;">
+        Leaflet.js + GeoJSON county boundaries (Milestone 2)</span>
+    </div>
+    </div>
+
+    <!-- Right: County drill-down -->
+    <div class="card" style="grid-column: 2; grid-row: 1;">
+    <div class="card-title">County Detail</div>
+    <select>
+        <option>Select a county...</option>
+        <option>Nairobi</option>
+        <option>Mombasa</option>
+        <option>Kisumu</option>
+        <option>Nakuru</option>
+        <option>Meru</option>
+        <option>Marsabit</option>
+        <option>Turkana</option>
+    </select>
+
+    <!-- Placeholder stats (will come from FastAPI in M5) -->
+    <div class="stat-grid">
+        <div class="stat-card">
+        <div class="stat-value" style="color:#22C55E;">0.78</div>
+        <div class="stat-label">Onset Probability<br>(next 7 days)</div>
+        </div>
+        <div class="stat-card">
+        <div class="stat-value" style="color:#1B3A5C;">47mm</div>
+        <div class="stat-label">7-Day Forecast<br>Cumulative Rainfall</div>
+        </div>
+        <div class="stat-card">
+        <div class="stat-value" style="color:#F59E0B;">Apr 12</div>
+        <div class="stat-label">Historical Average<br>Onset Date (1990–2020)</div>
+        </div>
+        <div class="stat-card">
+        <div class="stat-value" style="color:#EF4444;">+8 days</div>
+    <div class="stat-label">Observed Shift<br>Since 1980</div>
+        </div>
+    </div>
+    <div style="margin-top:12px; padding:10px; background:#FEF3C7;
+                border-radius:6px; border-left:4px solid #F59E0B;">
+        <div style="font-size:12px;font-weight:600;color:#92400E;">
+        ML Model Risk Score</div>
+        <div style="font-size:11px;color:#92400E;margin-top:4px;">
+        HIGH — Planting conditions likely to establish within 7 days.
+        (Placeholder: Vertex AI XGBoost in M4)</div>
+    </div>
+    </div>
+
+    <!-- Bottom: Historical trend chart -->
+    <div class="card" style="grid-column: 1 / -1; grid-row: 2;">
+    <div class="card-title">
+        Historical Onset Date Trend (1960–2024) — Selected County</div>
+    <div class="chart-ph">
+        Chart.js time-series chart — Average onset day-of-year per decade.
+        Data from Spark batch view in BigQuery (Milestone 2).
+    </div>
+    </div>
+
+</div><!-- end container -->
+
+  <!-- Footer note for mockup -->
+<div style="text-align:center;padding:16px;
+            font-size:11px;color:#9CA3AF;">
+    MILESTONE 1 MOCKUP — All data is placeholder. Live system delivered in M6.
+    | SDS 2412 | Kenya Rainfall Onset Advisory Dashboard
+</div>
+
+</body>
+</html>
