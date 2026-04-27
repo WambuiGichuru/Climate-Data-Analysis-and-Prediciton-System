@@ -10,19 +10,22 @@ The Kenya Seasonal Rainfall Onset Advisory Dashboard is a cloudâ€‘native, largeâ
 ### Team
 | Role | Name | Responsibility |
 |------|------|----------------|
-| R01  | [Dennis Gitau] | Data & Infrastructure Lead [RO1] |
-| R02  | [Ashley Otieno] | Distributed Processing Engineer [R02] |
-| R03  | [Alexander Kihoi] | Streaming & Real-Time Engineer [R03] |
-| R04  | [Eric Mugo] | ML & Analytics Engineer [R04] |
-| R05  | [Faith Gichuru] | DevOps, Deployment & Reporting Lead [R05] |
+| R01  | Dennis Gitau | Data & Infrastructure Lead [RO1] |
+| R02  | Ashley Otieno | Distributed Processing Engineer [R02] |
+| R03  | Alexander Kihoi | Streaming & Real-Time Engineer [R03] |
+| R04  | Eric Mugo | ML & Analytics Engineer [R04] |
+| R05  | Faith Gichuru | DevOps, Deployment & Reporting Lead [R05] |
 
 
-## USE BRANCHES TO ENSURE WE DO NOT OVERRIDE/OVERWRITE EACH OTHERS WORK
-main branch - Role5 only (Faith)
-feature/r01-ingest - Role1 only (Gitau)
-feature/r02-scalability -Role2 only (Ash)
+## USE BRANCHES TO ENSURE WE DO NOT OVERRIDE/OVERWRITE EACH OTHERS WORK for this first milestone
+main branch - Role5 only (Faith) 
+
+feature/r01-ingest - Role1 only (Gitau) 
+
+feature/r02-scalability -Role2 only (Ash) 
+
 feature/r03-openmeteo -Role 3 only (Alex)
-feature/r05-setup -Role5
+feature/r05-setup -Role5 (Faith)
 
 ## Reproducible Setup Guide (Data Scientist Handoff)
 
