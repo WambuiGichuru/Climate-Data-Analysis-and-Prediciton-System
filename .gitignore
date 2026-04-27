@@ -1,3 +1,9 @@
+#Parquet files
+*.parquet
+
+#Virtual Environment
+.venv/
+
 # ── Data files (too large for Git)
 data/raw/
 data/processed/

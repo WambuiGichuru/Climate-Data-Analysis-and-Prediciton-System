@@ -1,0 +1,52 @@
+{
+  "dataset": "reanalysis-era5-pressure-levels",
+  "request": {
+    "product_type": [
+      "reanalysis"
+    ],
+    "variable": [
+      "temperature"
+    ],
+    "year": [
+      "2026"
+    ],
+    "month": [
+      "01"
+    ],
+    "day": [
+      "01"
+    ],
+    "time": [
+      "00:00",
+      "01:00",
+      "02:00",
+      "03:00",
+      "04:00",
+      "05:00",
+      "06:00",
+      "07:00",
+      "08:00",
+      "09:00",
+      "10:00",
+      "11:00",
+      "12:00",
+      "13:00",
+      "14:00",
+      "15:00",
+      "16:00",
+      "17:00",
+      "18:00",
+      "19:00",
+      "20:00",
+      "21:00",
+      "22:00",
+      "23:00"
+    ],
+    "pressure_level": [
+      "1"
+    ],
+    "data_format": "netcdf"
+  },
+  "target": "/mnt/Data/Projects/Climate-Data-Analysis-and-Prediciton-System/src/ingest/data/raw/copernicus/era5_pressure_levels_sample.nc",
+  "ingested_at_utc": "2026-04-22T10:27:50.933553+00:00"
+}
