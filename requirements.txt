@@ -5,9 +5,12 @@ pyarrow >= 14.0.0   # for Parquet read/write
 
 # for data ingestion
 requests >= 2.31.0  # is for HTTP downloads and API calls
+click>=8.1.7
 
 # ERA5 access (register free at cds.climate.copernicus.eu)
 cdsapi>=0.6.1         # Copernicus Climate Data Store API client
+psycopg2-binary>=2.9.10
+SQLAlchemy>=2.0.36
 netCDF4>=1.6.5        # NetCDF file reading for ERA5
 xarray>=2023.12.0     # Label-aware arrays for NetCDF/ERA5 data
 
