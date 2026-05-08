@@ -19,5 +19,8 @@ seaborn>=0.13.0
 # Spark (ensure Java 11+ is installed separately)
 pyspark>=3.5.0
 
+# Streaming (M2/M3)
+kafka-python>=2.0.2   # Kafka producer/consumer client for Python
+
 # Workflow
 apache-airflow>=2.9.0

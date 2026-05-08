@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python src/streaming/count_min_sketch.py)",
+      "Bash(python src/streaming/latency_benchmark.py)"
+    ]
+  }
+}
