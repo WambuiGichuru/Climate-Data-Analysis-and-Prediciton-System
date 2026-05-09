@@ -10,10 +10,14 @@ Purpose   : Extends the M1 OpenMeteo live poller to publish hourly weather
             Message schema (JSON):
               {
                 "county":        str,   # e.g. "Nairobi"
-                "timestamp":     str,   # ISO-8601, e.g. "2025-04-01T14:00"
+                "timestamp":     str,   # ISO-8601 UTC, e.g. "2025-04-01T14:00"
+                "lat":           float, # county latitude
+                "lon":           float, # county longitude
                 "precipitation": float, # mm/hr
                 "temperature":   float, # °C
-                "soil_moisture": float  # m³/m³
+                "soil_moisture": float, # m³/m³
+                "humidity":      float, # % relative humidity
+                "wind_speed":    float  # m/s
               }
 
 Requires:
@@ -25,13 +29,14 @@ Run:
 """
 
 import json
+import signal
 import time
-import logging
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
+from loguru import logger
 
 # ── Lazy import kafka so the module can be imported without Kafka installed ───
 try:
@@ -43,89 +48,88 @@ except ImportError as _kafka_err:
         "Fix: pip install 'kafka-python>=2.0.2'"
     ) from _kafka_err
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_DIR / "streaming.log", encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
+from src.config import (
+    KENYA_COUNTIES, KAFKA_BROKER, KAFKA_RAW_TOPIC,
+    OPENMETEO_FORECAST_URL, LOG_DIR, setup_logging,
 )
-logger = logging.getLogger("kafka_producer")
 
 # ── Kafka / polling config ─────────────────────────────────────────────────────
-KAFKA_BOOTSTRAP = "localhost:9092"
-KAFKA_TOPIC     = "raw-weather-stream"
+KAFKA_BOOTSTRAP = KAFKA_BROKER
+KAFKA_TOPIC     = KAFKA_RAW_TOPIC
 POLL_INTERVAL   = 60   # seconds between full county sweeps
 MAX_RETRIES     = 5    # connection attempts before giving up
 RETRY_DELAY     = 10   # seconds between retries
 
-# ── Kenya county coordinates (mirrors M1 openmeteo_stream.py) ─────────────────
-KENYA_COUNTIES: dict[str, dict[str, float]] = {
-    "Nairobi":  {"lat": -1.2921, "lon": 36.8219},
-    "Kisumu":   {"lat": -0.0917, "lon": 34.7679},
-    "Nakuru":   {"lat": -0.3031, "lon": 36.0800},
-    "Meru":     {"lat":  0.0467, "lon": 37.6491},
-    "Kitui":    {"lat": -1.3667, "lon": 38.0167},
-    "Garissa":  {"lat": -0.4532, "lon": 39.6461},
-    "Machakos": {"lat": -1.5177, "lon": 37.2634},
-    "Eldoret":  {"lat":  0.5143, "lon": 35.2698},
-    "Kakamega": {"lat":  0.2827, "lon": 34.7519},
-    "Embu":     {"lat": -0.5300, "lon": 37.4500},
-}
+OPENMETEO_URL   = OPENMETEO_FORECAST_URL
 
-OPENMETEO_URL = "https://api.open-meteo.com/v1/forecast"
+_SHUTDOWN = False
+
+def _handle_sigint(signum, frame):
+    global _SHUTDOWN
+    _SHUTDOWN = True
+    logger.info("Shutdown signal received — will exit after current cycle.")
+
+signal.signal(signal.SIGINT,  _handle_sigint)
+signal.signal(signal.SIGTERM, _handle_sigint)
 
 
 # ── OpenMeteo fetch ────────────────────────────────────────────────────────────
 
 def fetch_current_weather(county: str, lat: float, lon: float) -> dict | None:
     """
-    Fetch the latest available hourly observation from OpenMeteo for one county.
+    Fetch latest hourly observation from OpenMeteo for one county.
 
-    Returns a dict matching the Kafka message schema, or None on any error.
-    Field mapping:
-      precipitation  ← hourly.precipitation       (mm/hr)
-      temperature    ← hourly.temperature_2m       (°C)
-      soil_moisture  ← hourly.soil_moisture_0_to_1cm (m³/m³)
+    Returns a dict matching the full Kafka message schema, or None on error.
+    Retries up to 3x with exponential backoff on API failures.
     """
     params = {
         "latitude":    lat,
         "longitude":   lon,
-        "hourly":      "precipitation,temperature_2m,soil_moisture_0_to_1cm",
+        "hourly":      ("precipitation,temperature_2m,soil_moisture_0_to_1cm,"
+                        "relative_humidity_2m,wind_speed_10m"),
         "forecast_days": 1,
         "timezone":    "Africa/Nairobi",
     }
-    try:
-        resp = requests.get(OPENMETEO_URL, params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.RequestException as exc:
-        logger.warning("HTTP error fetching %s: %s", county, exc)
-        return None
+    for attempt in range(1, 4):
+        try:
+            resp = requests.get(OPENMETEO_URL, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except requests.RequestException as exc:
+            wait = 2 ** attempt
+            logger.warning("HTTP error fetching %s (attempt %d/3): %s — retry in %ds",
+                           county, attempt, exc, wait)
+            if attempt == 3:
+                return None
+            time.sleep(wait)
 
     hourly = data.get("hourly", {})
     times  = hourly.get("time", [])
-    precip = hourly.get("precipitation", [])
-    temps  = hourly.get("temperature_2m", [])
-    soil   = hourly.get("soil_moisture_0_to_1cm", [])
-
     if not times:
         logger.warning("Empty hourly payload for %s — skipping.", county)
         return None
 
-    # Use the most recent available hour index
     idx = len(times) - 1
+
+    def _safe(key, default=None):
+        vals = hourly.get(key, [])
+        return round(float(vals[idx]), 4) if idx < len(vals) and vals[idx] is not None else default
+
     return {
         "county":        county,
-        "timestamp":     times[idx],                                  # ISO string
-        "precipitation": round(float(precip[idx]), 2) if idx < len(precip) else 0.0,
-        "temperature":   round(float(temps[idx]),  1) if idx < len(temps)  else None,
-        "soil_moisture": round(float(soil[idx]),   4) if idx < len(soil)   else None,
+        "timestamp":     datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "lat":           lat,
+        "lon":           lon,
+        "precipitation": _safe("precipitation", 0.0),
+        "temperature":   _safe("temperature_2m"),
+        "soil_moisture": _safe("soil_moisture_0_to_1cm"),
+        "humidity":      _safe("relative_humidity_2m"),
+        "wind_speed":    _safe("wind_speed_10m"),
     }
 
 
@@ -190,8 +194,9 @@ def poll_and_publish(producer: KafkaProducer) -> int:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
+    setup_logging("streaming.log")
     logger.info("=" * 60)
-    logger.info("Kafka Weather Producer — R03 M2")
+    logger.info("Kafka Weather Producer — R03 M2/M3")
     logger.info("Topic  : %s", KAFKA_TOPIC)
     logger.info("Broker : %s", KAFKA_BOOTSTRAP)
     logger.info("Interval: %ds per county sweep", POLL_INTERVAL)
@@ -201,18 +206,16 @@ def main() -> None:
     cycle = 0
 
     try:
-        while True:
+        while not _SHUTDOWN:
             cycle += 1
-            logger.info("─── Poll cycle %d  (%s UTC) ───",
-                        cycle, datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+            logger.info("Poll cycle %d  (%s UTC)",
+                        cycle, datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"))
             sent = poll_and_publish(producer)
             logger.info(
-                "Cycle %d done — %d/%d messages sent. Sleeping %ds …",
+                "Cycle %d done — %d/%d messages sent. Sleeping %ds ...",
                 cycle, sent, len(KENYA_COUNTIES), POLL_INTERVAL,
             )
             time.sleep(POLL_INTERVAL)
-    except KeyboardInterrupt:
-        logger.info("Producer stopped by user (KeyboardInterrupt).")
     finally:
         producer.close()
         logger.info("KafkaProducer closed cleanly.")
