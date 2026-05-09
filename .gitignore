@@ -44,3 +44,12 @@ nairobi_prophet_model.json
 nairobi_xgboost_model.joblib
 analysis/kenya_timeseries_v2.nc
 analysis/kenya_timeseries.nc
+
+# AI tool directories
+.claude/
+.claude
+*.claude
+.aider*
+.cursor/
+**/.claude/
+**/.claude
