@@ -1,0 +1,404 @@
+Failure Entry #1: Infrastructure Deadlock
+WHAT CHANGED: Attempted to initialize a VS Code Dev Container with Python 3.13 and Google Cloud CLI features to isolate the development environment.
+
+WHAT FAILED: The container failed to build/start. Error logs showed: <3>WSL (14975 - Relay) ERROR: CreateProcessParseCommon:1005: getpwuid(1000) failed 5 and Error response from daemon: write /var/lib/desktop-containerd/daemon/io.containerd.metadata.v1.bolt/meta.db: input/output error.
+
+WHY IT FAILED: Root Cause: A combination of corrupted Docker Desktop metadata and a WSL2 permissions breakdown. The engine couldn't write to its own internal database, making image pulling impossible.
+
+HOW FIXED: Decided to pivot away from the Dev Container infrastructure. Closed the remote window and opted for a Native Local Virtual Environment to bypass the corrupted Docker/WSL layer entirely.
+
+LESSON: If the underlying container engine (Docker/WSL) reports I/O errors, stop trying to rebuild the container. Pivot to a local environment to maintain project momentum while infrastructure is "unhealthy."
+
+Failure Entry #2: The Windows Python Alias Trap
+WHAT CHANGED: Tried to create a local virtual environment using the command python -m venv venv.
+
+WHAT FAILED: Windows error: Python was not found; run without arguments to install from the Microsoft Store...
+
+WHY IT FAILED: Root Cause: Windows "App Execution Aliases" were enabled. These are fake python.exe shortcuts that point to the Microsoft Store instead of the actual Python installation on the system path.
+
+HOW FIXED: Used the VS Code GUI (Command Palette: Python: Create Environment) to create the .venv. This method automatically identifies the correct executable path and ignores the Windows store aliases.
+
+LESSON: On Windows machines, the python command is often hijacked. Using the py launcher or the VS Code GUI is a more reliable way to manage environments.
+
+Failure Entry #3: Directory Misalignment (Pathing)
+WHAT CHANGED: Attempted to verify the presence of raw climate data files using os.listdir('data/raw').
+
+WHAT FAILED: Result: ❌ Still not found. Folder not found.
+
+WHY IT FAILED: Root Cause: The Jupyter Notebook was executing with the Working Directory set to the /analysis subfolder, but the code was written assuming it was at the Project Root. Additionally, the data was nested deeper than expected in src/ingest/data/raw.
+
+HOW FIXED: Integrated a directory-check script: if os.getcwd().endswith('analysis'): os.chdir('..'). Updated the path variable to os.path.join('src', 'ingest', 'data', 'raw') to match the specific project structure.
+
+LESSON: Never assume the Notebook's starting path. Always include a "Root Check" at the top of an EDA notebook to ensure relative paths stay consistent across different machines.
+Failure Entry #4: Data "Ghosting" (False Metadata Read)
+WHAT CHANGED: Attempted to calculate the NaN rate for the ingested Copernicus climate data using ds.isnull().sum().
+
+WHAT FAILED: The initial output reported a dataset size of only 16 bytes and 0 dimensions, despite the physical file being 32MB.
+
+WHY IT FAILED: Root Cause: xarray uses "Lazy Loading." It only reads the metadata header initially. Because the data hadn't been "computed" or accessed, the summary statistics were reporting on the pointer, not the actual 25 million data points.
+
+HOW FIXED: Forced a data access call by requesting .values and running a .compute() equivalent. This triggered the library to actually read the 100MB of uncompressed atmospheric data in RAM.
+
+LESSON: When working with Large Data (96GB+), always verify the ds.dims and physical file size. If the dimensions are empty, the analysis is running on metadata only.
+
+Failure Entry #5: The "Recursive Purge" (For your Log)
+WHAT CHANGED: Attempted to build the Dev Container while manually deleting orphaned volumes in the background.
+
+WHAT FAILED: The build process failed/hung, likely due to a file-access conflict when Docker tried to write to a volume that was being deleted by the system prune.
+
+WHY IT FAILED: Root Cause: Race condition between the Docker Daemon and the user. You cannot safely prune the foundation while the house is being built.
+
+HOW FIXED: Decided on a "Recursive Purge": Closing VS Code, running a force-prune on all volumes/images, and rebuilding the Dev Container from a completely empty state.
+
+LESSON: If a Docker build fails once, don't just "retry." Fully wipe the cache and volumes to prevent corrupted layers from stacking.
+
+Failure Entry #6: Environment Pivot & System Purification
+WHAT CHANGED: Transitioned from a temporary local .venv back to a fresh Docker Dev Container environment.
+
+WHAT FAILED: Previous attempts to use the container failed due to input/output metadata errors and a bloated image build (GCP CLI overhead).
+
+WHY IT FAILED: Root Cause: A combination of "Ghost" volumes from previous failed builds and WSL2 memory/permission conflicts. The lingering metadata in the orphaned volumes was preventing a clean Docker-to-Windows file handshake.
+
+HOW FIXED: 1.  Nuclear Prune: Executed docker system prune -a --volumes --force to destroy all corrupted image layers and orphaned volumes.
+2.  Config Reset: Deleted the .devcontainer folder entirely and generated a "Lean" configuration.
+3.  Feature Reduction: Stripped out the heavy GCP CLI "Feature" to minimize build-time stress on laptop RAM, opting for a Python-native library approach instead.
+
+LESSON: When a containerized environment suffers from persistent I/O errors, the most efficient path is to delete the configuration files and purge the Docker daemon entirely rather than attempting to patch a "dirty" build.
+
+Failure Entry #7: The "Infrastructure Deadlock"
+
+STATUS: Factory Reset Hang.
+
+SYMPTOM: Docker Desktop GUI unresponsive during reset.
+
+CAUSE: Likely a locked WSL2 process or corrupted AppData state from the previous I/O errors.
+
+REMEDY: Manual process kill via Task Manager and wsl --shutdown followed by manual deletion of local configuration caches.
+
+Log Entry #8: Full Infrastructure Recovery & Environment Stabilization
+STATUS: COMPLETE / SUCCESSFUL
+
+ISSUE: Persistent input/output errors preventing container volume creation and library installation.
+
+ROOT CAUSE: File system corruption within the WSL2 docker-desktop-data distribution, likely caused by previous I/O interrupts and volume bloat.
+
+RECOVERY STEPS:
+
+System Purification: Executed wsl --shutdown to clear process locks.
+
+Kernel Reset: Used wsl --unregister on both docker-desktop and docker-desktop-data to force-delete corrupted virtual hard disks (VHDX).
+
+Clean Rebuild: Re-initialized Docker Desktop and built a "Lean" Dev Container (Python 3.12-slim) to minimize disk pressure.
+
+Dependency Isolation: Successfully installed requirements.txt into the container's global environment, bypassing the need for nested .venv folders.
+
+VERIFICATION: pip list confirms all analytics libraries (Pandas, Xarray, etc.) are present and the environment is responsive.
+
+Log Entry #9: Data Pipeline Validation & Success
+STATUS: MILESTONE 1 COMPLETE
+
+TASK: Supporting service launch and initial data ingestion.
+
+ACTION:
+
+Executed docker compose up -d from the host terminal to launch the persistent database layer.
+
+Verified container networking between the Dev Container (Python) and the DB Container (TimescaleDB/PostgreSQL).
+
+Triggered the ingestion script for the Copernicus climate datasets.
+
+OUTCOME:
+
+Data Integrity: Successful write operations to the database with zero disk-lock errors.
+
+Resource Stability: RAM and Disk usage remained within the new allocated limits.
+
+System State: Multi-container stack is fully synchronized and healthy.
+
+Log Entry #10: Development Environment Reset
+WHAT CHANGED: Attempted to clean up Docker system resources using a prune command to free up space after a large data ingestion.
+
+WHAT FAILED: The Dev Container was deleted, and upon reopening, all previously installed Python libraries (Pandas, SQLAlchemy, etc.) were missing from the environment.
+
+WHY IT FAILED: Running a prune on containers removes the active development instance. While the image and code remained, the ephemeral installation of packages in the .venv was not fully persisted or required a manual re-install.
+
+HOW FIXED: Reopened the project in the Dev Container via VS Code and executed pip install -r requirements.txt to restore the workspace state.
+
+LESSON: Dev Containers should be treated as ephemeral. Always keep requirements.txt updated so the environment can be rebuilt in seconds.
+
+Log Entry #11: Cross-Container Database Connectivity
+WHAT CHANGED: Attempted to connect the Jupyter Notebook (eda_ml.ipynb) to the PostgreSQL database to verify data ingestion.
+
+WHAT FAILED: psycopg2.OperationalError: could not translate host name "pgdatabase" to address: Name or service not known.
+
+WHY IT FAILED: The Dev Container and the Database container were on different Docker networks. The Dev Container did not have the DNS routing necessary to resolve the service name ingest-pgdatabase-1.
+
+HOW FIXED: Identified the network name using docker network ls and manually bridged the containers using docker network connect ingest_default <container_id>. Updated the connection string to use the explicit container name ingest-pgdatabase-1.
+
+LESSON: Docker Compose networks are isolated by default. When using a separate Dev Container, it must be explicitly joined to the application network to allow inter-container communication.
+
+Log Entry #12: Jupyter Command Execution
+WHAT CHANGED: Attempted to launch the Jupyter Notebook server from the terminal using jupyter notebook.
+
+WHAT FAILED: Jupyter command jupyter-notebook not found.
+
+WHY IT FAILED: The notebook package was not included in the base Python installation or the initial requirements, and the system path did not recognize the subcommand.
+
+HOW FIXED: Leveraged the VS Code Native Jupyter Extension to bypass the terminal command, selecting the local .venv as the kernel directly.
+
+LESSON: In a VS Code environment, the native Jupyter integration is more reliable and handles port forwarding/token authentication more gracefully than manual terminal execution.
+
+ Failure Log Entry #13 (Pre-emptive)
+WHAT CHANGED: Initiating Exploratory Data Analysis on a dataset of 1M+ rows.
+
+WHAT FAILED: (Potential) System slowdown or kernel crash when attempting a full table load into a Pandas DataFrame.
+
+WHY IT FAILED: Exceeding the memory (RAM) limits of the Dev Container by attempting to store the entire PostgreSQL table as an in-memory object.
+
+HOW FIXED: Implementation of SQL-level aggregation and TABLESAMPLE queries to limit the memory footprint during the visualization phase.
+
+LESSON: Databases are for storage and heavy math; Python DataFrames are for focused analysis. Never SELECT * on large tables without a LIMIT or WHERE clause.
+
+Log Entry #14 (Potential)
+WHAT CHANGED: Attempted to plot daily average temperature trends using matplotlib.
+
+WHAT FAILED: Empty plot displayed with an incorrect time axis (2024–2028).
+
+WHY IT FAILED: Likely a mismatch between the actual data timestamps and the default axis scaling, or the date column was not correctly parsed as a datetime object by the plotting engine.
+
+HOW FIXED: Forced explicit datetime conversion using pd.to_datetime() and added markers to the plot to verify point existence
+
+Log Entry #14: Plotting Failure (Single Point)
+WHAT CHANGED: Attempted to visualize daily temperature trends over time.
+
+WHAT FAILED: image_9a21d5.png showed an empty line chart with an oversized 4-year x-axis.
+
+WHY IT FAILED: The dataframe only contained one row of data (2026-04-05). Line plots require at least two points to render a segment, and the default axis scaling made a single point invisible.
+
+HOW FIXED: Switched to a bar chart/scatter plot and implemented data labels to confirm the existence of the single record.
+
+LESSON: Always check the length and date range of a dataframe (df.info() or len()) before plotting to ensure the visualization method matches the data volume.
+
+Log Entry #15: Spatial vs. Temporal Data Mismatch
+
+WHAT CHANGED: Attempted to perform temporal (time-series) analysis on the ingested ERA5 dataset.
+
+WHAT FAILED: Aggregation produced only a single data point ($2026-04-05$), resulting in a single-bar chart as seen in image_9a21d5.png.
+
+WHY IT FAILED: The ingestion parameters requested a high-resolution spatial grid (1M+ points) but for a single timestamp. The "volume" of the data was spatial (latitude/longitude) rather than temporal (days/months).
+
+HOW FIXED: Pivoted EDA strategy from time-series line plots to spatial heatmaps and coordinate distribution analysis.
+
+LESSON: Always verify the "dimensions" of your big data. High row counts can be misleading if they all share a single index in one dimension (time).
+
+Log Entry #16: Data Dimensionality Validation
+
+WHAT CHANGED: Generated a spatial distribution plot to interpret the 1.03M rows of data.
+
+WHAT FAILED: Initial expectation was a time-series; however, the plot (image_9a1db3.png) revealed a static global grid.
+
+WHY IT FAILED: The data represents a "spatial slice" rather than a "temporal sequence." The 1 million rows are unique coordinate points (lat/lon) all sharing the same valid_time index.
+
+HOW FIXED: Validated the data limits ($Lat: -90$ to $90$, $Lon: 0$ to $360$) to confirm a full-earth coverage. Pivoted the EDA to focus on geographic temperature variance.
+
+LESSON: In planetary data, volume ($N > 1M$) can exist entirely in the spatial dimension. For ML forecasting, we must explicitly request multiple "steps" in the temporal dimension.
+
+Log Entry #17: Redefining Project Scope for Prediction
+WHAT CHANGED: Pivoted from Global Spatial Analysis to a localized Temporal Prediction model focused on Kenya.
+
+WHAT FAILED: The previous dataset was a "snapshot" (many locations, one time), which is unsuitable for training time-series forecasting models.
+
+WHY IT FAILED: Forecasting requires a sequence of observations over time to learn patterns, trends, and seasonality. A single timestamp provides no "history" for the model to learn from.
+
+HOW FIXED: Re-configuring the CDS API request to target a single coordinate point (Lat: 1.29, Lon: 36.82) over a multi-year period (730+ daily observations).
+
+LESSON: Machine Learning "Prediction" is dependent on the temporal dimension. High-resolution spatial data is valuable for mapping, but temporal depth is non-negotiable for forecasting.
+
+Log Entry #18: New Data Pipeline for Localized Forecasting
+
+WHAT CHANGED: Created ingest_kenya_timeseries.py to target specific coordinates in Kenya ($1.29^\circ N, 36.82^\circ E$).
+
+WHAT FAILED: The previous global dataset lacked the historical depth required for time-series forecasting.
+
+WHY IT FAILED: Forecasting models require "look-back" periods (historical data) to predict future values. A single spatial snapshot contains no history.
+
+LESSON: It is often more effective to have "Thin and Deep" data (one location, many times) for forecasting than "Wide and Shallow" data (many locations, one time).
+
+Log Entry #19: API Authentication Failure in Notebook
+WHAT CHANGED: Attempted to initialize the cdsapi.Client() within a Jupyter Notebook cell to start the Kenya data ingestion.
+
+WHAT FAILED: Exception: Missing/incomplete configuration file: /home/vscode/.cdsapirc.
+
+WHY IT FAILED: The cdsapi library expects a configuration file in the user's home directory. While the file exists on the host machine, it was not correctly mapped or accessible to the vscode user profile inside the active Dev Container environment.
+
+HOW FIXED: Hardcoded the url and key parameters directly into the cdsapi.Client() constructor to bypass the filesystem requirement.
+
+LESSON: Dev Containers provide isolation, which includes the home directory. Configuration files must either be explicitly volume-mounted in devcontainer.json or provided as environment variables/constructor arguments.
+
+Log Entry #20: Resistance to Configuration Overhead
+WHAT CHANGED: Attempted to resolve API authentication issues via manual container configuration.
+
+WHAT FAILED: The process proved too cumbersome and detracted from the primary goal of EDA.
+
+WHY IT FAILED: Over-complicating environment setup (manual file creation/linking) creates a barrier to entry for rapid prototyping.
+
+HOW FIXED: Simplified the approach by using direct parameter injection in the cdsapi.Client constructor, removing the dependency on external configuration files.
+
+LESSON: When the toolchain becomes a bottleneck, pivot to the most direct "in-code" solution to maintain project velocity.
+
+LOG ENTRY #21: Final Ingestion Strategy Alignment
+
+WHAT CHANGED: Consolidating API request, processing, and database injection into a single robust script.
+
+WHAT FAILED: Fragmented configuration and filesystem-based auth were causing environment-specific crashes.
+
+WHY IT FAILED: Jupyter kernels in Dev Containers often lack access to home-directory config files mapped in different sessions.
+
+HOW FIXED: Hardcoded API credentials and used a dedicated table name to ensure a clean, repeatable data pipeline for Kenya.
+
+LESSON: For collaborative or containerized development, internalizing configuration within the script (or using environment variables) is more reliable than relying on hidden system files
+
+Log Entry #22: Infrastructure Latency in Subsetting
+WHAT CHANGED: Initiated a high-depth temporal request for Kenya (2023-2024).
+
+WHAT FAILED: Observed significantly higher latency compared to the previous global spatial request.
+
+WHY IT FAILED: This is a "System Latency" issue, not a code failure. Retrieval of time-series data from a standard GRIB/NetCDF archive requires the server to perform thousands of "reads" across different files to extract a single point over time, whereas a global snapshot is often a single pre-cached file.
+
+HOW FIXED: Monitored the cdsapi status logs; confirmed the request moved from accepted to running.
+
+LESSON: Spatial requests are often "faster" to retrieve but harder to process locally (memory-heavy). Temporal requests are "slower" to retrieve (server-side subsetting) but much easier to analyze locally (memory-light).
+
+Log Entry #23: Missing IO Backend for NetCDF
+WHAT CHANGED: Attempted to process the successfully downloaded kenya_timeseries.nc file.
+
+WHAT FAILED: ValueError: did not find a match in any of xarray's currently installed IO backends.
+
+WHY IT FAILED: xarray is a high-level wrapper; it requires low-level "engines" to read specific file formats. The Dev Container had xarray but was missing the h5netcdf or netcdf4 libraries required to decode the downloaded ERA5 format.
+
+HOW FIXED: Installed h5netcdf via pip and explicitly called engine='h5netcdf' in the open_dataset function to ensure compatibility.
+
+LESSON: When working with specialized scientific file formats (NetCDF, GRIB), always verify that the underlying IO drivers are included in the environment setup.
+
+Log Entry #24: Automated Ingestion Recovery
+WHAT CHANGED: Rewrote the ingestion script to include an existence check for local NetCDF files and explicit engine declaration.
+
+WHAT FAILED: Kernel restarts and library installations previously required manual re-execution of long-running API calls.
+
+WHY IT FAILED: Standard scripts often assume a "clean slate," leading to redundant 15-minute wait times if a downstream step (like the database upload) fails.
+
+HOW FIXED: Implemented os.path.exists() logic to bypass the download phase if the raw data is already present, and utilized the h5netcdf engine to resolve IO backend errors.
+
+LESSON: Build "idempotent" scripts—code that can be run multiple times without causing errors or wasting resources—especially when dealing with cloud APIs and large datasets.
+
+Log Entry #25: Recursive Dependency Resolution
+WHAT CHANGED: Attempted to run the "Smart Skip" ingestion script after installing h5netcdf.
+
+WHAT FAILED: ModuleNotFoundError: No module named 'h5py'.
+
+WHY IT FAILED: Scientific Python packages often have "nested" dependencies. xarray requires h5netcdf, which in turn requires h5py to interface with HDF5-based NetCDF4 files.
+
+HOW FIXED: Explicitly installed h5py to complete the IO stack.
+
+LESSON: When a "backend" is unavailable, check the documentation for sub-dependencies that the high-level package might not automatically include in a minimal environment.
+
+Log Entry #26: Binary Corruption and Recovery
+WHAT CHANGED: Encountered ValueError: Unable to synchronously open file (file signature not found) when attempting to read the local .nc file.
+
+WHAT FAILED: The "Smart Skip" logic was attempting to read a corrupted/partial file from a previous failed session.
+
+WHY IT FAILED: Interrupted downloads or script crashes during file-writing often leave "ghost" files that have the correct name but lack the internal structure (the "signature") required by HDF5/NetCDF drivers.
+
+HOW FIXED: Manually deleted the corrupted file using os.remove() and triggered a clean re-download from the CDS API.
+
+LESSON: If a file exists but throws "signature" or "header" errors, assume corruption and re-acquire the source data rather than troubleshooting the local copy.
+
+Log Entry #27: Finalized Pipeline Implementation
+WHAT CHANGED: Integrated explicit file deletion, multi-dependency IO engines, and direct API authentication into a single function.
+
+WHAT FAILED: Previous attempts were blocked by "domino" dependency issues (h5netcdf -> h5py) and binary file corruption.
+
+WHY IT FAILED: Container environments require explicit manual installation of scientific IO drivers, and interrupted writes produce unreadable headers.
+
+HOW FIXED: Forced a fresh download cycle and utilized the h5netcdf backend to bridge the gap between ERA5's format and Python's xarray.
+
+Log Entry #28: Database Verification & Baseline EDA
+WHAT CHANGED: Successfully bypassed API caching and IO backend errors to populate kenya_temporal_data.
+
+STATUS: Verified table existence in PostgreSQL; transitioned to data validation phase.
+
+WHY IT WORKED: Switching the filename (v2) forced the API to bypass a potentially corrupted local cache, and the h5netcdf engine successfully parsed the binary HDF5 structure.
+
+NEXT STEP: Validate the temporal continuity of the data to ensure no "gaps" exist that would break a Machine Learning forecast.
+
+Log Entry #29: Transition to Predictive Modeling
+STATUS: Data ingestion successful and validated via Postgres.
+
+DATA QUALITY: Confirmed 6-hourly temporal resolution with logical temperature ranges (15-26°C).
+
+MODEL SELECTION: Selecting Prophet for the baseline forecast due to its native handling of daily and yearly seasonality in environmental data.
+
+CHALLENGE: Forecasting 2024 temperatures using the 2023 historical baseline we just ingested.
+
+og Entry #30: Model Environment Preparation
+
+STATUS: Finalizing the predictive environment.
+
+ACTION: Installing prophet to handle the multi-period seasonality identified in the EDA phase.
+
+OBSERVATION: The 6-hour intervals in image_6678c2.png provide enough granularity for the model to "learn" the daily temperature swing (diurnal cycle).
+
+RISK: Kernel restarts are required for C++ based backends; however, the PostgreSQL persistence layer prevents data loss.
+
+Log Entry #31: Model Training & Forecasting
+
+STATUS: Training Prophet model on $n=1460$ observations.
+
+INPUT: ds (timestamps) and y (Celsius) from 2023.
+
+PARAMETERIZATION: Set daily_seasonality=True and freq='6H' to maintain the diurnal resolution observed in image_6678c2.png.
+
+OUTPUT: 14-day temporal forecast with uncertainty intervals.
+
+LESSON: Machine Learning on climate data requires matching the model's frequency to the physical sampling rate of the sensors (or reanalysis grid).
+
+Log Entry #32: Syntax Depreciation in Pandas 2.x+
+
+STATUS: Debugging make_future_dataframe failure.
+
+ERROR: ValueError: Invalid frequency: 6H.
+
+CAUSE: Upgraded Pandas environment (Python 3.13) enforces lowercase frequency aliases.
+
+RESOLUTION: Updated freq parameter from 6H to 6h.
+
+OBSERVATION: The cmdstanpy logs showed Chain [1] done processing, which means the Model Training actually finished successfully before the error. You don't need to retrain; just run the updated prediction/plotting code.
+
+Log Entry #33: Final Predictive Execution
+STATUS: Finalizing forecast visualization.
+
+ADJUSTMENT: Standardized temporal frequency to 6h to maintain compatibility with Python 3.13 / Pandas 2.2+.
+
+ANALYSIS PLAN: Decomposing the output into diurnal cycles (checking if the temperature peak aligns with Nairobi's typical 2:00 PM peak) and trend lines (identifying any background warming throughout the 2023 dataset).
+
+SUCCESS CRITERIA: Visual confirmation of the "sawtooth" temperature pattern in the blue forecast line, indicating successful learning of the day/night cycle.
+
+Log Entry #34: Model Validation and Insights
+
+OBSERVATION: The forecast demonstrates a high-fidelity capture of Nairobi’s bimodal seasonal cycle (two peaks/two troughs).
+
+DIURNAL AMPLITUDE: The model successfully learned a consistent daily temperature swing of approximately $10\text{°C}$ to $12\text{°C}$.
+
+DATA FIDELITY: The 6-hourly sampling from ERA5 was sufficient to prevent "aliasing" (missing the peaks/troughs of the day).
+
+NEXT STEP: Now that we have a baseline, we can use this to detect Anomalies. For example, if tomorrow's real-time temperature is $32\text{°C}$ but the model predicted $27\text{°C}$, we have an automated way to flag a "Heat Event."
+
+Log Entry #35: Project Closure
+ACHIEVEMENT: Successfully ingested, cleaned, stored, modeled, and forecasted ERA5 climate data for Nairobi.
+
+TECHNICAL STACK: CDSAPI (Ingestion) -> xarray/h5netcdf (Processing) -> PostgreSQL (Persistence) -> Prophet (ML/Forecasting).
+
+VALIDATION: Visual and statistical confirmation of diurnal and seasonal cycles.
+
+FUTURE USE: The nairobi_forecast table can now be plugged into a dashboard or used to trigger automated alerts for temperature anomalies.
+
