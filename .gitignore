@@ -26,3 +26,12 @@ service-account-key.json
 # ── OS clutter
 .DS_Store
 Thumbs.db
+
+# AI tool directories
+.claude/
+.claude
+*.claude
+.aider*
+.cursor/
+**/.claude/
+**/.claude
