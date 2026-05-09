@@ -1,23 +1,45 @@
-# for core data processing
-pandas >= 2.0.0
-numpy >= 1.24.0
-pyarrow >= 14.0.0   # for Parquet read/write
+# ── Core data processing ─────────────────────────────────────────────────────
+pandas>=2.1.0
+numpy>=1.26.0
+pyarrow>=14.0.0
+requests>=2.31.0
+click>=8.1.7
+python-dotenv>=1.0.0
 
-# for data ingestion
-requests >= 2.31.0  # is for HTTP downloads and API calls
+# ── ERA5 / Copernicus access (register at cds.climate.copernicus.eu) ─────────
+cdsapi>=0.6.1
+psycopg2-binary>=2.9.10
+SQLAlchemy>=2.0.36
+netCDF4>=1.6.5
+xarray>=2023.12.0
 
-# ERA5 access (register free at cds.climate.copernicus.eu)
-cdsapi>=0.6.1         # Copernicus Climate Data Store API client
-netCDF4>=1.6.5        # NetCDF file reading for ERA5
-xarray>=2023.12.0     # Label-aware arrays for NetCDF/ERA5 data
-
-# Analysis and ML (preview for M4)
-scikit-learn>=1.3.0
+# ── Analysis and visualisation ───────────────────────────────────────────────
+scikit-learn>=1.4.0
 matplotlib>=3.8.0
 seaborn>=0.13.0
+xgboost>=2.0.0
+shap>=0.44.0
+prophet>=1.1.5
 
-# Spark (ensure Java 11+ is installed separately)
+# ── Spark (ensure Java 11+ is installed separately) ──────────────────────────
 pyspark>=3.5.0
 
-# Workflow
-apache-airflow>=2.9.0
+# ── Streaming / Kafka ────────────────────────────────────────────────────────
+kafka-python>=2.0.2
+confluent-kafka>=2.3.0
+
+# ── Workflow orchestration ───────────────────────────────────────────────────
+apache-airflow>=2.8.0
+
+# ── Dashboard and API ────────────────────────────────────────────────────────
+streamlit>=1.31.0
+plotly>=5.18.0
+folium>=0.15.0
+fastapi>=0.110.0
+uvicorn>=0.27.0
+
+# ── Logging and observability ────────────────────────────────────────────────
+loguru>=0.7.0
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest>=8.0.0
