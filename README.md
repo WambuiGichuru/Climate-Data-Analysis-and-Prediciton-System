@@ -25,6 +25,9 @@ feature/r01-ingest - Role1 only (Gitau)
 feature/r02-scalability -Role2 only (Ash) 
 
 feature/r03-openmeteo -Role 3 only (Alex)
+
+feature/r04-eda/mlops - Role 4 only(Eric)
+
 feature/r05-setup -Role5 (Faith)
 
 ## Reproducible Setup Guide (Data Scientist Handoff)
