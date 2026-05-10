@@ -37,6 +37,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from src.config import KENYA_COUNTIES
 
@@ -277,7 +278,7 @@ def health() -> dict:
 
 
 @app.get("/api/v1/risk-map")
-def get_risk_map() -> dict:
+def get_risk_map() -> JSONResponse:
     """Return a GeoJSON FeatureCollection of all counties with risk fields.
 
     Each feature carries:
@@ -289,6 +290,9 @@ def get_risk_map() -> dict:
     If Vertex AI is unreachable, ml_probability is omitted from every
     feature but the endpoint still returns 200 with the speed-layer
     view — see CLAUDE.md M4 contract.
+
+    Cache-Control: public, max-age=900 (15 minutes) is set so Cloud
+    CDN / browser caches absorb dashboard refresh traffic — see M5.
     """
     live = _read_live_forecast()
 
@@ -326,7 +330,7 @@ def get_risk_map() -> dict:
             "properties": properties,
         })
 
-    return {
+    payload = {
         "type":     "FeatureCollection",
         "metadata": {
             "last_updated_utc": datetime.now(timezone.utc).isoformat(),
@@ -337,6 +341,10 @@ def get_risk_map() -> dict:
         },
         "features": features,
     }
+    return JSONResponse(
+        content=payload,
+        headers={"Cache-Control": "public, max-age=900"},
+    )
 
 
 @app.get("/api/v1/county/{county_name}")
