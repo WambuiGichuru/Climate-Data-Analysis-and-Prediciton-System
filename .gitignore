@@ -32,3 +32,15 @@ service-account-key.json
 # ── OS clutter
 .DS_Store
 Thumbs.db
+.devcontainer/devcontainer.json
+.github/dependabot.yml
+src/ingest/data/raw/copernicus/era5_pressure_levels_sample.grib.metadata.json
+src/ingest/data/raw/copernicus/era5_pressure_levels_sample.nc.metadata.json
+src/ingest/src/ingest/data/raw/copernicus/reanalysis-era5-pressure-levels_2026_04_02.grib.47d85.idx
+src/ingest/data/raw/copernicus/reanalysis-era5-pressure-levels_2026_04_02.grib.47d85.idx
+src/ingest/data/raw/copernicus/era5_pressure_levels_sample.nc
+analysis/new_eda_ml.ipynb
+nairobi_prophet_model.json
+nairobi_xgboost_model.joblib
+analysis/kenya_timeseries_v2.nc
+analysis/kenya_timeseries.nc
