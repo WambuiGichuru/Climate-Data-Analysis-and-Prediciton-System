@@ -35,3 +35,7 @@ Thumbs.db
 .cursor/
 **/.claude/
 **/.claude
+CLAUDE.md
+.claudeignore
+.copilot/
+*.ai-cache
