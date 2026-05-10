@@ -1,0 +1,36 @@
+# Dockerfile.poller
+# Author    : R05 - Faith Gichuru
+# Milestone : M3
+# Purpose   : Slim container image for the OpenMeteo Cloud Run Job. Runs
+#             src/ingest/openmeteo_live_poller.py once per invocation.
+#             Cloud Scheduler triggers the Job hourly; Job exits 0 on
+#             success and Cloud Run logs are picked up by Cloud Logging.
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Minimal runtime deps - the poller only needs requests + loguru.
+# Pinning keeps the image reproducible between rebuilds.
+RUN pip install --no-cache-dir \
+        requests==2.32.3 \
+        loguru==0.7.2
+
+# Copy only the code paths the poller imports. Keeps the image small
+# and avoids shipping pyspark / pandas / xgboost into Cloud Run.
+COPY src/__init__.py                       src/__init__.py
+COPY src/config.py                         src/config.py
+COPY src/ingest/openmeteo_live_poller.py   src/ingest/openmeteo_live_poller.py
+
+# Drop privileges - Cloud Run defaults to root which is unnecessary here.
+RUN useradd --create-home --uid 1001 poller \
+    && chown -R poller:poller /app
+USER poller
+
+# The poller script handles its own sys.path setup, so we invoke it
+# directly rather than via `python -m`.
+CMD ["python", "src/ingest/openmeteo_live_poller.py"]

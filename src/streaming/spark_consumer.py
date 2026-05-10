@@ -43,6 +43,7 @@ Target latency: < 5 seconds end-to-end (micro-batch trigger = 10 s).
 import os
 import sys
 import logging
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # ── Make the streaming package importable when run via spark-submit ──────────
@@ -102,6 +103,10 @@ for _sub in ["3hr_tumbling", "24hr_sliding", "onset"]:
 KAFKA_BOOTSTRAP = "localhost:9092"
 INPUT_TOPIC     = "raw-weather-stream"
 ALERT_TOPIC     = "onset-alerts"
+
+# ── Firestore (speed-layer sink read by the dashboard API) ───────────────────
+FIRESTORE_COLLECTION = "live_forecast"
+FIRESTORE_TTL_DAYS   = 7
 
 # ── Onset threshold ───────────────────────────────────────────────────────────
 ONSET_THRESHOLD_MM = 20.0
@@ -322,6 +327,89 @@ def stream_24hr_sliding(
     return query
 
 
+# ── Firestore sink helpers ───────────────────────────────────────────────────
+
+_FIRESTORE_CLIENT = None
+
+
+def _get_firestore_client(firestore_module):
+    """Lazy-build a single Firestore client per driver process.
+
+    A SparkSession outlives many micro-batches; constructing a fresh
+    client on every batch would leak gRPC channels. Caching one
+    module-level client keeps connection overhead constant.
+    """
+    global _FIRESTORE_CLIENT
+    if _FIRESTORE_CLIENT is None:
+        _FIRESTORE_CLIENT = firestore_module.Client()
+    return _FIRESTORE_CLIENT
+
+
+def _publish_alerts_to_firestore(alerts_df: DataFrame) -> None:
+    """Mirror onset alerts into Firestore collection 'live_forecast'.
+
+    Why a parallel sink alongside Kafka:
+      The dashboard API reads from Firestore — it is the speed-layer
+      view served to end users. Kafka remains the durable, replayable
+      event stream consumed by other systems.
+
+    TTL:
+      Each document carries 'expires_at = now + 7 days'. A Firestore
+      TTL policy (configured manually per
+      infrastructure/gcp/setup_firestore_ttl.md) deletes documents
+      whose expires_at has passed, capping per-county history at one
+      week and bounding storage cost.
+
+    Doc id:
+      Uses the county name as the document id so the most recent
+      alert per county overwrites the previous one — the dashboard
+      always sees the freshest value without needing a query.
+
+    Failure semantics:
+      Firestore errors are caught and logged. A Firestore outage
+      must not kill the Spark streaming job — Kafka has already
+      received the alert in this same batch, so the canonical event
+      is preserved.
+    """
+    try:
+        from google.cloud import firestore   # optional dep — lazy import
+    except ImportError:
+        logger.warning(
+            "google-cloud-firestore not installed; skipping Firestore sink. "
+            "Install with: pip install google-cloud-firestore"
+        )
+        return
+
+    try:
+        client     = _get_firestore_client(firestore)
+        collection = client.collection(FIRESTORE_COLLECTION)
+        now        = datetime.now(timezone.utc)
+        expires_at = now + timedelta(days=FIRESTORE_TTL_DAYS)
+
+        # alerts_df has at most ~10 rows (one per county) → toPandas safe
+        pdf = alerts_df.select(
+            "county", "alert_timestamp", "cum_72hr_mm", "onset_flag"
+        ).toPandas()
+
+        for _, row in pdf.iterrows():
+            doc = {
+                "county":          str(row["county"]),
+                "alert_timestamp": row["alert_timestamp"],
+                "cum_72hr_mm":     float(row["cum_72hr_mm"]),
+                "onset_flag":      bool(row["onset_flag"]),
+                "expires_at":      expires_at,
+                "ingested_at":     now,
+            }
+            collection.document(str(row["county"])).set(doc)
+
+        logger.info(
+            "Firestore sink: wrote %d doc(s) to '%s' (expires_at=%s).",
+            len(pdf), FIRESTORE_COLLECTION, expires_at.isoformat(),
+        )
+    except Exception as exc:
+        logger.warning("Firestore sink failed (Kafka was unaffected): %s", exc)
+
+
 # ── 72-hour onset detection (foreachBatch) ────────────────────────────────────
 
 def _make_onset_processor(spark: SparkSession):
@@ -393,6 +481,11 @@ def _make_onset_processor(spark: SparkSession):
                 .option("topic", ALERT_TOPIC)
                 .save()
             )
+
+            # Parallel sink: mirror the same alerts into Firestore so the
+            # dashboard API can read them. See _publish_alerts_to_firestore
+            # for the full rationale (TTL, failure semantics, doc id).
+            _publish_alerts_to_firestore(alerts)
         else:
             logger.info("Batch %d: no onset conditions met.", batch_id)
 
