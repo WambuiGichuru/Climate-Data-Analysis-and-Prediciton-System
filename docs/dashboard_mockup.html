@@ -165,5 +165,109 @@
     | SDS 2412 | Kenya Rainfall Onset Advisory Dashboard
 </div>
 
+<script>
+/*
+ * M6 — live data overlay.
+ * Fetches /api/v1/risk-map from the deployed Cloud Run API and updates
+ * the freshness timestamp + injects a per-county risk strip into the
+ * map placeholder. If the API is unreachable, the static mockup above
+ * stays as-is so the page is still usable as a standalone file.
+ *
+ * Replace API_URL with the URL printed by infrastructure/gcp/deploy_api.sh.
+ */
+(function () {
+  "use strict";
+
+  // Replace this string with the URL emitted by deploy_api.sh.
+  const API_URL = "https://kenya-onset-api-REPLACE_ME.a.run.app";
+
+  // Map onset_risk band -> existing legend dot class. Keeps the live
+  // overlay consistent with the colour palette already on the page.
+  const RISK_CLASS = {
+    HIGH:     "dot-high",
+    MODERATE: "dot-med",
+    LOW:      "dot-low",
+  };
+
+  function setFreshness(iso) {
+    const el = document.querySelector(".freshness");
+    if (!el || !iso) return;
+    // metadata.last_updated_utc is ISO-8601 UTC; render in local browser tz
+    // and keep the "Forecast as of:" prefix that matches the static layout.
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) {
+      el.textContent = "Forecast as of: " + iso;
+    } else {
+      el.textContent = "Forecast as of: " + d.toLocaleString();
+    }
+  }
+
+  function renderCounties(features) {
+    const placeholder = document.querySelector(".map-placeholder");
+    if (!placeholder || !Array.isArray(features)) return;
+
+    // Drop any previous live overlay before re-rendering.
+    const previous = placeholder.querySelector(".live-counties");
+    if (previous) previous.remove();
+
+    const wrap = document.createElement("div");
+    wrap.className = "live-counties";
+    wrap.style.cssText =
+      "margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit," +
+      "minmax(140px,1fr));gap:6px;width:100%;padding:0 12px;";
+
+    features.forEach(function (f) {
+      const p = (f && f.properties) || {};
+      const county = p.county || "?";
+      const band = (p.onset_risk || "LOW").toUpperCase();
+      const dotClass = RISK_CLASS[band] || "dot-low";
+      const score = typeof p.onset_risk_score === "number"
+        ? p.onset_risk_score.toFixed(2)
+        : "—";
+      const mlBadge = typeof p.ml_probability === "number"
+        ? " · ML " + p.ml_probability.toFixed(2)
+        : "";
+
+      const row = document.createElement("div");
+      row.style.cssText =
+        "display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;" +
+        "background:white;border:1px solid #D1FAE5;border-radius:4px;padding:6px 8px;";
+      row.innerHTML =
+        '<span class="dot ' + dotClass + '"></span>' +
+        '<strong>' + county + '</strong>' +
+        '<span style="margin-left:auto;color:#6B7280;">' +
+          score + mlBadge +
+        '</span>';
+      wrap.appendChild(row);
+    });
+
+    placeholder.appendChild(wrap);
+  }
+
+  function loadRiskMap() {
+    fetch(API_URL + "/api/v1/risk-map", { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        if (data && data.metadata) setFreshness(data.metadata.last_updated_utc);
+        if (data && data.features) renderCounties(data.features);
+      })
+      .catch(function (err) {
+        // Graceful fallback: leave the static placeholders in place and
+        // log so a developer opening devtools can see why the overlay
+        // didn't render. End users still see the M1 mockup.
+        console.warn("[dashboard] live API unreachable:", err);
+      });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", loadRiskMap);
+  } else {
+    loadRiskMap();
+  }
+})();
+</script>
 </body>
 </html>

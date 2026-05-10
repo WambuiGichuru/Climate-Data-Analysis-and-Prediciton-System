@@ -168,3 +168,57 @@ To also remove volumes (deletes local Postgres data):
 ```bash
 docker compose down -v
 ```
+
+## Live System
+
+These URLs point at the deployed M6 system. Replace the placeholders
+with the values printed by the deploy scripts when you run them.
+
+| Component       | URL                                                                  |
+| --------------- | -------------------------------------------------------------------- |
+| Dashboard       | `https://sds2412-kenya-onset.web.app/dashboard_mockup.html` (placeholder) |
+| API             | `https://kenya-onset-api-REPLACE_ME.a.run.app` (placeholder)         |
+| API Docs        | `https://kenya-onset-api-REPLACE_ME.a.run.app/docs` (placeholder)    |
+
+Update `docs/dashboard_mockup.html` (`API_URL` constant) once the API
+URL above is known so the live overlay can load.
+
+## Running the Project
+
+Each milestone owns a runnable entry point. Replace
+`GCP_PROJECT_ID` / `GCS_BUCKET` etc. with your own values before
+running anything that touches GCP.
+
+```bash
+# M1 — Local ingestion (R01)
+cd src/ingest && docker compose up -d
+docker run --rm cds_ingest:v001 --dataset reanalysis-era5-pressure-levels ...
+
+# M2 — Distributed batch + Airflow DAG (R02 + R05)
+bash infrastructure/gcp/submit_spark_job.sh
+bash infrastructure/gcp/verify_bigquery.sh
+airflow dags trigger kenya_onset_pipeline       # see dags/climate_batch_dag.py
+
+# M3 — Streaming (R03 + R05)
+docker compose -f docker-compose-kafka.yml up -d
+python src/streaming/kafka_producer.py
+spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \
+    src/streaming/spark_consumer.py
+bash infrastructure/gcp/deploy_poller.sh
+bash infrastructure/gcp/setup_scheduler.sh
+# Firestore TTL: see infrastructure/gcp/setup_firestore_ttl.md
+
+# M4 — ML serving (R04 + R05)
+bash infrastructure/gcp/deploy_vertex.sh        # prints ENDPOINT_ID
+bash infrastructure/gcp/setup_monitoring.sh
+
+# M5 — Public API + load test (R05)
+bash infrastructure/gcp/deploy_api.sh           # prints Cloud Run URL
+locust -f locustfile.py --host "$API_URL"
+# Dashboard: see infrastructure/gcp/setup_monitoring_dashboard.md
+
+# M6 — Dashboard + pre-demo check (R05)
+bash infrastructure/gcp/deploy_firebase.sh
+API_URL=...  GCP_PROJECT_ID=...  GCS_BUCKET=... \
+    bash infrastructure/gcp/predemo_healthcheck.sh
+```

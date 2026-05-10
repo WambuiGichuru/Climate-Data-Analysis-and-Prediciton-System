@@ -1,0 +1,71 @@
+# Dockerfile.api
+# Author    : R05 - Faith Gichuru
+# Milestone : M5
+# Purpose   : Production container image for src/serving/api.py served on
+#             Cloud Run. Multi-stage build: stage 1 compiles wheels into
+#             a virtualenv; stage 2 ships only the venv + source onto a
+#             slim base, then runs as a non-root user. Cloud Run injects
+#             $PORT, which entrypoint.sh forwards to uvicorn.
+
+# ---------------------------------------------------------------------------
+# Stage 1 - builder: install pinned API + GCP client deps into /opt/venv
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH
+
+# Build-time tooling needed by some grpc / cryptography wheels. Removed
+# in stage 2 by simply not copying it forward.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv "${VIRTUAL_ENV}"
+
+# Install only what api.py imports. Keeping this tight makes the final
+# image small and cold-start fast on Cloud Run.
+RUN pip install --no-cache-dir \
+        fastapi==0.110.0 \
+        uvicorn[standard]==0.27.1 \
+        google-cloud-firestore==2.16.0 \
+        google-cloud-bigquery==3.21.0 \
+        google-cloud-aiplatform==1.49.0
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 - runtime: slim base, copy venv + source, drop privileges
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    PORT=8080
+
+WORKDIR /app
+
+# Copy the prebuilt virtualenv from the builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy only the code the API needs (src/config.py is imported by api.py).
+COPY src/__init__.py             src/__init__.py
+COPY src/config.py               src/config.py
+COPY src/serving/__init__.py     src/serving/__init__.py
+COPY src/serving/api.py          src/serving/api.py
+COPY infrastructure/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && useradd --create-home --uid 1001 apiuser \
+    && chown -R apiuser:apiuser /app
+
+USER apiuser
+
+EXPOSE 8080
+
+# entrypoint.sh execs uvicorn with $PORT (injected by Cloud Run).
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
