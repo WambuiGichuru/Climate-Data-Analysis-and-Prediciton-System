@@ -18,10 +18,10 @@
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteEnv": {
     "PYTHONUNBUFFERED": "1",
-    "GCP_PROJECT_ID":   "sds2412-kenya-onset",
+    "GCP_PROJECT_ID":   "climate-prediction-system",
     "GCP_REGION":       "us-central1",
     "BQ_DATASET":       "kenya_onset",
-    "GCS_BUCKET":       "sds2412-kenya-onset-data"
+    "GCS_BUCKET":       "climate-prediction-system-data"
   },
   "customizations": {
     "vscode": {

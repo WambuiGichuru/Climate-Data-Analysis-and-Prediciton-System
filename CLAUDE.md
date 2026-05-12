@@ -26,8 +26,8 @@
 
 Kenya County-Level Rainfall Onset Advisory Dashboard
 Course: SDS2412 — Analysis of Large Datasets, Group Two
-GCP Project: sds2412-kenya-onset
-Bucket: gs://sds2412-kenya-onset-data
+GCP Project: climate-prediction-system
+Bucket: gs://climate-prediction-system-data
 BigQuery dataset: kenya_onset
 Region: us-central1
 GitHub: github.com/WambuiGichuru/Climate-Data-Analysis-and-Prediciton-System
@@ -39,7 +39,7 @@ GitHub: github.com/WambuiGichuru/Climate-Data-Analysis-and-Prediciton-System
 ### R01 — Dennis (Data & Infrastructure Lead) — DONE
 - ERA5 ingestion pipeline: src/ingest/era5_downloader.py
 - NetCDF to Parquet conversion: src/processing/era5_to_parquet.py
-- Parquet files live on GCS: gs://sds2412-kenya-onset-data/processed/
+- Parquet files live on GCS: gs://climate-prediction-system-data/processed/
 - Ingestion logs in logs/
 
 ### R02 — Ashley (Distributed Processing Engineer) — DONE
@@ -50,7 +50,7 @@ GitHub: github.com/WambuiGichuru/Climate-Data-Analysis-and-Prediciton-System
 
 ### R04 — Eric (ML & Analytics Engineer) — DONE
 - XGBoost model trained and serialised
-- Model artifact: gs://sds2412-kenya-onset-data/ml/models/xgboost_onset_v1.joblib
+- Model artifact: gs://climate-prediction-system-data/ml/models/xgboost_onset_v1.joblib
 - SHAP analysis complete
 - EDA figures in analysis/figures/
 

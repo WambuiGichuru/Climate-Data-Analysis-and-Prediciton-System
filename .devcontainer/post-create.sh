@@ -86,7 +86,7 @@ cat <<'EOF'
 
          gcloud auth login
          gcloud auth application-default login
-         gcloud config set project sds2412-kenya-onset
+         gcloud config set project climate-prediction-system
 
   2) Start the full stack (Kafka + FastAPI + Streamlit):
 
