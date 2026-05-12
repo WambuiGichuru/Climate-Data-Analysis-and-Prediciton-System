@@ -7,7 +7,7 @@
 #             validate_outputs task and by the M6 pre-demo healthcheck.
 #
 # Required env vars:
-#   GCP_PROJECT_ID - target GCP project (e.g. sds2412-kenya-onset)
+#   GCP_PROJECT_ID - target GCP project (e.g. climate-prediction-system)
 #
 # Optional env vars:
 #   BQ_DATASET     - dataset name (default: kenya_onset)

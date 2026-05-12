@@ -8,7 +8,7 @@
 #             ALERT_EMAIL.
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP project (e.g. sds2412-kenya-onset)
+#   GCP_PROJECT_ID  - GCP project (e.g. climate-prediction-system)
 #
 # Optional env vars:
 #   GCP_REGION         - default us-central1 (only used in display)

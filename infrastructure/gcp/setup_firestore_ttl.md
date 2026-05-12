@@ -17,7 +17,7 @@ collection never grows beyond a one-week window.
 ## Prerequisites
 
 - Firestore database created in **Native mode** in the project
-  `sds2412-kenya-onset` (region: `us-central1` or `nam5` — match the
+  `climate-prediction-system` (region: `us-central1` or `nam5` — match the
   region used by the rest of the stack).
 - IAM role on your user account: `Datastore Owner` (or higher).
 - The streaming consumer has been run at least once so the
@@ -30,7 +30,7 @@ collection never grows beyond a one-week window.
 ## Step-by-step (Cloud Console)
 
 1. Open <https://console.cloud.google.com/firestore/databases> and pick
-   the `sds2412-kenya-onset` project.
+   the `climate-prediction-system` project.
 2. Select the `(default)` database.
 3. In the left sidebar, click **Time-to-live (TTL)**.
 4. Click **+ Create policy**.

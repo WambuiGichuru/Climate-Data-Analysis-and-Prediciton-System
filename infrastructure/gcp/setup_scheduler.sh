@@ -12,7 +12,7 @@
 #             Job for the trigger to succeed (granted in step 1).
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP project (e.g. sds2412-kenya-onset)
+#   GCP_PROJECT_ID  - GCP project (e.g. climate-prediction-system)
 #
 # Optional env vars:
 #   GCP_REGION         - default us-central1

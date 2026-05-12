@@ -8,7 +8,7 @@
 #             revision onto the same service.
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP project (e.g. sds2412-kenya-onset)
+#   GCP_PROJECT_ID  - GCP project (e.g. climate-prediction-system)
 #   GCS_BUCKET      - bucket without gs:// (passed through to the API
 #                     so historical-trend etc. can resolve resources)
 #

@@ -12,7 +12,7 @@
 #               * BigQuery dataset access    (kenya_onset.historical_onset)
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP project (default: sds2412-kenya-onset)
+#   GCP_PROJECT_ID  - GCP project (default: climate-prediction-system)
 #
 # Optional env vars:
 #   GCP_REGION      - Cloud Run region (default: us-central1)
@@ -20,7 +20,7 @@
 #   BQ_DATASET      - BigQuery dataset (default: kenya_onset)
 set -euo pipefail
 
-GCP_PROJECT_ID="${GCP_PROJECT_ID:-sds2412-kenya-onset}"
+GCP_PROJECT_ID="${GCP_PROJECT_ID:-climate-prediction-system}"
 GCP_REGION="${GCP_REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-kenya-onset-api}"
 BQ_DATASET="${BQ_DATASET:-kenya_onset}"

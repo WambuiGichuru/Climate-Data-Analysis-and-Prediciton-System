@@ -176,7 +176,7 @@ the GCP project and region you deploy into. After running the M5/M6
 deploy scripts, fetch the real URLs in one command:
 
 ```bash
-GCP_PROJECT_ID=sds2412-kenya-onset \
+GCP_PROJECT_ID=climate-prediction-system \
     bash infrastructure/gcp/get_live_urls.sh
 ```
 
@@ -207,7 +207,7 @@ Docker isn't required on your laptop - everything runs in Codespaces.
    ```bash
    gcloud auth login
    gcloud auth application-default login
-   gcloud config set project sds2412-kenya-onset
+   gcloud config set project climate-prediction-system
    ```
 
 3. Start the full stack (Kafka + FastAPI + Streamlit):

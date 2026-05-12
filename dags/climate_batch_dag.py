@@ -39,8 +39,8 @@ log = logging.getLogger(__name__)
 # Run-time configuration (env-driven; sane defaults match project README)
 # ---------------------------------------------------------------------------
 REPO_ROOT      = os.environ.get("REPO_ROOT", "/opt/airflow/repo")
-GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "sds2412-kenya-onset")
-GCS_BUCKET     = os.environ.get("GCS_BUCKET", "sds2412-kenya-onset-data")
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "climate-prediction-system")
+GCS_BUCKET     = os.environ.get("GCS_BUCKET", "climate-prediction-system-data")
 BQ_DATASET     = os.environ.get("BQ_DATASET", "kenya_onset")
 GCP_REGION     = os.environ.get("GCP_REGION", "us-central1")
 

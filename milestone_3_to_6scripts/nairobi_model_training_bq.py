@@ -7,7 +7,7 @@ import joblib
 # Logic: Fetching from the BigQuery tables built in Milestone 2/3
 client = bigquery.Client()
 query = """
-    SELECT * FROM `sds2412-kenya-onset.ml_features.nairobi_daily_weather`
+    SELECT * FROM `climate-prediction-system.ml_features.nairobi_daily_weather`
     WHERE year BETWEEN 1990 AND 2023
 """
 df = client.query(query).to_dataframe()

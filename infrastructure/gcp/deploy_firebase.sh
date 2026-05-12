@@ -7,7 +7,7 @@
 #             that fetches the Cloud Run API once Firebase serves it.
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP / Firebase project (e.g. sds2412-kenya-onset)
+#   GCP_PROJECT_ID  - GCP / Firebase project (e.g. climate-prediction-system)
 #
 # Optional env vars:
 #   FIREBASE_SITE   - hosting site id (default: same as GCP_PROJECT_ID)

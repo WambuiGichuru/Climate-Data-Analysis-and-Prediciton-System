@@ -58,7 +58,7 @@ services:
       - "8000:8080"
     environment:
       PORT: 8080
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-sds2412-kenya-onset}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-climate-prediction-system}
       GCP_REGION:     ${GCP_REGION:-us-central1}
       BQ_DATASET:     ${BQ_DATASET:-kenya_onset}
       VERTEX_ENDPOINT_ID: ${VERTEX_ENDPOINT_ID:-}

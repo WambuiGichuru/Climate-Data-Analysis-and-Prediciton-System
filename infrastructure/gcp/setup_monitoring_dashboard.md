@@ -6,7 +6,7 @@ Cloud Monitoring's dashboard JSON schema is verbose and brittle, so
 this document is the canonical procedure rather than a script.
 
 > Audience: anyone with `Monitoring Editor` on
-> `sds2412-kenya-onset` (or whatever `GCP_PROJECT_ID` is set to).
+> `climate-prediction-system` (or whatever `GCP_PROJECT_ID` is set to).
 
 ---
 
@@ -60,7 +60,7 @@ is failing silently — see the API's `Firestore unavailable` warning.
 - **Title**: `BigQuery queries (historical-trend)`
 - **Metric**: `bigquery.googleapis.com/query/count`
   (resource type *BigQuery Project*).
-- **Filter**: `project_id = sds2412-kenya-onset`.
+- **Filter**: `project_id = climate-prediction-system`.
 - Aligner `ALIGN_RATE`, reducer `REDUCE_SUM`.
 - Y-axis units: queries/s.
 

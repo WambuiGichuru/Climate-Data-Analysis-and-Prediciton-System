@@ -7,8 +7,8 @@
 #             run_spark_pipeline task.
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - target GCP project (e.g. sds2412-kenya-onset)
-#   GCS_BUCKET      - bucket WITHOUT gs:// prefix (e.g. sds2412-kenya-onset-data)
+#   GCP_PROJECT_ID  - target GCP project (e.g. climate-prediction-system)
+#   GCS_BUCKET      - bucket WITHOUT gs:// prefix (e.g. climate-prediction-system-data)
 #
 # Optional env vars:
 #   GCP_REGION      - Dataproc region (default: us-central1)

@@ -9,8 +9,8 @@
 #             it just updates the Job to the latest image.
 #
 # Required env vars:
-#   GCP_PROJECT_ID  - GCP project (e.g. sds2412-kenya-onset)
-#   GCS_BUCKET      - data bucket without gs:// (e.g. sds2412-kenya-onset-data)
+#   GCP_PROJECT_ID  - GCP project (e.g. climate-prediction-system)
+#   GCS_BUCKET      - data bucket without gs:// (e.g. climate-prediction-system-data)
 #
 # Optional env vars:
 #   GCP_REGION      - default us-central1

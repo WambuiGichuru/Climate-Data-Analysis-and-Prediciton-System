@@ -50,7 +50,7 @@ logging.basicConfig(
 # ---------------------------------------------------------------------------
 # Run-time configuration (all from env so the image is portable)
 # ---------------------------------------------------------------------------
-GCP_PROJECT_ID     = os.environ.get("GCP_PROJECT_ID", "sds2412-kenya-onset")
+GCP_PROJECT_ID     = os.environ.get("GCP_PROJECT_ID", "climate-prediction-system")
 GCP_REGION         = os.environ.get("GCP_REGION", "us-central1")
 BQ_DATASET         = os.environ.get("BQ_DATASET", "kenya_onset")
 VERTEX_ENDPOINT_ID = os.environ.get("VERTEX_ENDPOINT_ID", "")
