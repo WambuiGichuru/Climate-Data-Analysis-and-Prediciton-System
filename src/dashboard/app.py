@@ -24,7 +24,10 @@ st.set_page_config(
 
 from src.config import KENYA_COUNTIES, COUNTY_NAMES
 from src.dashboard.data_loader import (
+    api_enabled,
+    api_health,
     load_historical_onset,
+    load_historical_trend_from_api,
     load_streaming_alerts,
     load_live_forecast,
 )
@@ -38,6 +41,32 @@ st.sidebar.markdown("SDS 2412 — Lambda Architecture Demo")
 
 county_options = ["All Counties"] + COUNTY_NAMES
 selected_county = st.sidebar.selectbox("Select County", county_options)
+
+st.sidebar.markdown("---")
+
+# Connection-status pill — at a glance, is the dashboard talking to GCP?
+_health = api_health()
+if not api_enabled():
+    st.sidebar.warning(
+        "GCP API: **offline**\n\n"
+        "Set `API_URL` env var to the Cloud Run service URL to load "
+        "Firestore + BigQuery + Vertex AI data. Falling back to local "
+        "parquet and OpenMeteo for now."
+    )
+elif _health["reachable"]:
+    vertex_msg = "Vertex AI active" if _health.get("vertex") else "rule-based only"
+    st.sidebar.success(
+        f"GCP API: **connected**\n\n"
+        f"`{_health['url']}`\n\n"
+        f"Status: {_health['status']} · v{_health.get('version', '?')} · "
+        f"{vertex_msg}"
+    )
+else:
+    st.sidebar.error(
+        f"GCP API: **unreachable**\n\n"
+        f"`{_health['url']}`\n\n"
+        f"Error: {_health['error'][:120]}"
+    )
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Auto-refreshes every 30 seconds on Overview tab.")
@@ -191,6 +220,35 @@ with tab_forecast:
 # ── Historical Trends ────────────────────────────────────────────────────────
 with tab_history:
     st.header("Historical Onset Trends")
+
+    # ── BigQuery-backed recent activity (only when API is connected) ─────
+    if api_enabled() and _health["reachable"]:
+        st.subheader("Recent Onset Activity (BigQuery, last 180 days)")
+        county_q = selected_county if selected_county != "All Counties" else None
+        bq_df = load_historical_trend_from_api(county_q, days=180)
+        if bq_df.empty:
+            st.info(
+                "BigQuery returned no rows for this window. "
+                "Run `bash infrastructure/gcp/submit_spark_job.sh` to "
+                "populate `kenya_onset.historical_onset`."
+            )
+        else:
+            try:
+                import plotly.express as px
+                fig_bq = px.bar(
+                    bq_df,
+                    x="day", y="avg_cum_72hr_mm",
+                    color="county" if county_q is None else None,
+                    title="Average 72-hour cumulative rainfall (BigQuery)",
+                    labels={"avg_cum_72hr_mm": "Avg 72hr precip (mm)",
+                            "day": "Date"},
+                    height=320,
+                )
+                st.plotly_chart(fig_bq, use_container_width=True)
+            except ImportError:
+                st.dataframe(bq_df, use_container_width=True)
+
+    st.subheader("Climatological Onset Day-of-Year")
     onset_df = load_historical_onset()
 
     county_filter = selected_county if selected_county != "All Counties" else None

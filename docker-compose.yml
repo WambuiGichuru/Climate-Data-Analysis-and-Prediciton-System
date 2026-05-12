@@ -50,22 +50,41 @@ services:
       - "8080:8080"
 
   fastapi:
-    build: .
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: climate-fastapi
     ports:
-      - "8000:8000"
-    command: uvicorn src.serving.api:app --host 0.0.0.0 --port 8000 --reload
+      - "8000:8080"
+    environment:
+      PORT: 8080
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-sds2412-kenya-onset}
+      GCP_REGION:     ${GCP_REGION:-us-central1}
+      BQ_DATASET:     ${BQ_DATASET:-kenya_onset}
+      VERTEX_ENDPOINT_ID: ${VERTEX_ENDPOINT_ID:-}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
     volumes:
-      - ".:/app"
+      # Mount ADC so the container can talk to BigQuery / Firestore /
+      # Vertex AI using the host's `gcloud auth application-default login`
+      # credentials. The path is the Codespaces / Linux default.
+      - "${HOME}/.config/gcloud:/home/apiuser/.config/gcloud:ro"
     depends_on:
       kafka:
         condition: service_healthy
 
   streamlit:
-    build: .
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.streamlit
+    container_name: climate-streamlit
     ports:
       - "8501:8501"
-    command: streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
-    volumes:
-      - ".:/app"
+    environment:
+      PORT: 8501
+      # Talk to the API over the docker-compose network. Override
+      # API_URL when running the dashboard against a deployed Cloud
+      # Run service instead of the local container.
+      API_URL: ${API_URL:-http://fastapi:8080}
+      API_TIMEOUT_S: ${API_TIMEOUT_S:-5}
     depends_on:
       - fastapi
