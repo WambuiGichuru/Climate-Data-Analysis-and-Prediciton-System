@@ -1,0 +1,88 @@
+# Dockerfile.streamlit
+# Milestone : M6
+# Purpose   : Slim container image for the Streamlit dashboard
+#             (src/dashboard/app.py). Multi-stage build keeps the
+#             runtime image small; the dashboard runs as a non-root
+#             user and is configured via env vars (API_URL,
+#             API_TIMEOUT_S, GCP_PROJECT_ID).
+#
+# Build:
+#     docker build -f infrastructure/docker/Dockerfile.streamlit \
+#                  -t kenya-onset-dashboard:dev .
+# Run:
+#     docker run --rm -p 8501:8501 \
+#                -e API_URL=https://kenya-onset-api-xxx.a.run.app \
+#                kenya-onset-dashboard:dev
+
+# ---------------------------------------------------------------------------
+# Stage 1 - builder: install pinned deps into a virtualenv
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv "${VIRTUAL_ENV}"
+
+# Only what the dashboard actually imports. Pinning keeps the image
+# reproducible across rebuilds and avoids surprise upgrades.
+RUN pip install --no-cache-dir \
+        streamlit==1.36.0 \
+        streamlit-folium==0.20.0 \
+        folium==0.16.0 \
+        plotly==5.22.0 \
+        pandas==2.2.2 \
+        numpy==1.26.4 \
+        pyarrow==16.1.0 \
+        requests==2.32.3 \
+        joblib==1.4.2 \
+        xgboost==2.0.3 \
+        scikit-learn==1.5.0
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 - runtime: slim base, copy venv + source, drop privileges
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    PORT=8501 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy only the code the dashboard imports.
+COPY src/__init__.py                       src/__init__.py
+COPY src/config.py                         src/config.py
+COPY src/dashboard/__init__.py             src/dashboard/__init__.py
+COPY src/dashboard/app.py                  src/dashboard/app.py
+COPY src/dashboard/data_loader.py          src/dashboard/data_loader.py
+COPY src/ml/                               src/ml/
+COPY infrastructure/docker/entrypoint_streamlit.sh /usr/local/bin/entrypoint_streamlit.sh
+
+# Model artifact - optional. Bake it into the image when present so
+# the dashboard works even without API_URL (Codespaces demo mode).
+COPY xgb_outputs/                          xgb_outputs/
+
+RUN chmod +x /usr/local/bin/entrypoint_streamlit.sh \
+    && useradd --create-home --uid 1001 dashuser \
+    && chown -R dashuser:dashuser /app
+
+USER dashuser
+
+EXPOSE 8501
+
+ENTRYPOINT ["/usr/local/bin/entrypoint_streamlit.sh"]

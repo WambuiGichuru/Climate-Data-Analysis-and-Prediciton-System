@@ -171,17 +171,61 @@ docker compose down -v
 
 ## Live System
 
-These URLs point at the deployed M6 system. Replace the placeholders
-with the values printed by the deploy scripts when you run them.
+The deployed URLs are not hard-coded in this README - they depend on
+the GCP project and region you deploy into. After running the M5/M6
+deploy scripts, fetch the real URLs in one command:
 
-| Component       | URL                                                                  |
-| --------------- | -------------------------------------------------------------------- |
-| Dashboard       | `https://sds2412-kenya-onset.web.app/dashboard_mockup.html` (placeholder) |
-| API             | `https://kenya-onset-api-REPLACE_ME.a.run.app` (placeholder)         |
-| API Docs        | `https://kenya-onset-api-REPLACE_ME.a.run.app/docs` (placeholder)    |
+```bash
+GCP_PROJECT_ID=sds2412-kenya-onset \
+    bash infrastructure/gcp/get_live_urls.sh
+```
 
-Update `docs/dashboard_mockup.html` (`API_URL` constant) once the API
-URL above is known so the live overlay can load.
+The script queries `gcloud` and `firebase` and prints a paste-ready
+table of:
+
+- Streamlit / Firebase Hosting dashboard URL
+- Cloud Run API URL (and `/docs`, `/health`)
+- Cloud Run Job status for `openmeteo-poller`
+- BigQuery row count in `kenya_onset.historical_onset`
+
+Copy the API URL into:
+
+1. The `API_URL` env var for the Streamlit dashboard
+   (`export API_URL=...` before `docker compose up streamlit`).
+2. The `API_URL` constant in `docs/dashboard_mockup.html` so the
+   static dashboard overlay loads live data.
+
+## Running in GitHub Codespaces
+
+Docker isn't required on your laptop - everything runs in Codespaces.
+
+1. Open the repo in Codespaces (`Code` -> `Codespaces` -> `Create
+   codespace on feature/r05-setup`). The `.devcontainer/` config
+   provisions Python 3.11, Docker-in-Docker, and the `gcloud` CLI.
+2. Authenticate to GCP from the Codespaces terminal:
+
+   ```bash
+   gcloud auth login
+   gcloud auth application-default login
+   gcloud config set project sds2412-kenya-onset
+   ```
+
+3. Start the full stack (Kafka + FastAPI + Streamlit):
+
+   ```bash
+   docker compose up --build
+   ```
+
+   Streamlit is auto-forwarded on port 8501 and opens in a new tab.
+
+4. To point the dashboard at the deployed Cloud Run API instead of
+   the local FastAPI container:
+
+   ```bash
+   export API_URL=$(bash infrastructure/gcp/get_live_urls.sh \
+       | grep -oE 'https://[^ ]+\.run\.app' | head -n1)
+   docker compose up --build streamlit
+   ```
 
 ## Running the Project
 

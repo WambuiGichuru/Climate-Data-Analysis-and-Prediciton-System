@@ -52,6 +52,30 @@ if [[ ! -f docs/dashboard_mockup.html ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Step 3a - optionally substitute the real Cloud Run URL into the HTML.
+# Uses an in-place edit guarded by a backup so the working tree is
+# restored even if the deploy fails. No-op when API_URL is unset.
+# ---------------------------------------------------------------------------
+HTML="docs/dashboard_mockup.html"
+HTML_BAK=""
+if [[ -n "${API_URL:-}" && -f "${HTML}" ]]; then
+  echo "[deploy_firebase] step 3a: injecting API_URL=${API_URL} into ${HTML}"
+  HTML_BAK="$(mktemp)"
+  cp "${HTML}" "${HTML_BAK}"
+  # The | delimiter avoids escaping the slashes in the URL.
+  sed -i.tmp "s|https://kenya-onset-api-REPLACE_ME.a.run.app|${API_URL}|g" "${HTML}"
+  rm -f "${HTML}.tmp"
+fi
+
+restore_html() {
+  if [[ -n "${HTML_BAK}" && -f "${HTML_BAK}" ]]; then
+    mv "${HTML_BAK}" "${HTML}"
+    echo "[deploy_firebase] restored ${HTML} from backup"
+  fi
+}
+trap restore_html EXIT
+
+# ---------------------------------------------------------------------------
 # Step 3 - deploy hosting only
 # ---------------------------------------------------------------------------
 echo "[deploy_firebase] step 3/3: running 'firebase deploy --only hosting'"
@@ -69,5 +93,8 @@ echo "[deploy_firebase] DONE"
 echo "[deploy_firebase]   site URL   = ${SITE_URL}"
 echo "[deploy_firebase]   dashboard  = ${SITE_URL}/dashboard_mockup.html"
 echo ""
-echo "Remember to update docs/dashboard_mockup.html — replace the API_URL"
-echo "placeholder with the Cloud Run service URL printed by deploy_api.sh."
+if [[ -z "${API_URL:-}" ]]; then
+  echo "[deploy_firebase] note: API_URL env var was not set — the dashboard"
+  echo "was deployed with the placeholder URL. Set API_URL=... and re-run"
+  echo "to publish a version that talks to your live Cloud Run service."
+fi

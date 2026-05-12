@@ -33,10 +33,18 @@ apache-airflow>=2.8.0
 
 # ── Dashboard and API ────────────────────────────────────────────────────────
 streamlit>=1.31.0
+streamlit-folium>=0.20.0
 plotly>=5.18.0
 folium>=0.15.0
 fastapi>=0.110.0
 uvicorn>=0.27.0
+joblib>=1.3.0
+
+# ── GCP clients (used by src/serving/api.py for live BigQuery / Firestore
+#    / Vertex AI access; safe to keep optional in local-only setups)
+google-cloud-firestore>=2.16.0
+google-cloud-bigquery>=3.21.0
+google-cloud-aiplatform>=1.49.0
 
 # ── Logging and observability ────────────────────────────────────────────────
 loguru>=0.7.0
